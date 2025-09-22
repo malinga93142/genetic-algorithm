@@ -28,7 +28,8 @@ template <typename T>
     public:
       enum class selection_method{
         TOURNAMENT,
-        SUS // Stochastic Universal Sampling
+        SUS, // Stochastic Universal Sampling
+        ROULETTE_WHEEL
       };
     private:
       // configuration parameters
@@ -84,7 +85,10 @@ template <typename T>
         std::sort(population.begin(), population.end());
       }
 
-      individual<T> tournament_selection(size_t tournament_size = 0){
+      individual<T> tournament_selection(size_t tournament_size = 3){
+        if (tournament_size < 1) tournament_size = 1;
+        if (tournament_size > population_size)  tournament_size = population_size;
+
         std::vector<individual<T>> tournament;
         std::uniform_int_distribution<size_t> dist(0, population_size-1);
 
@@ -116,7 +120,6 @@ template <typename T>
           }
           return selected;
         }
-
         // calculate selection probabilities
 
         std::vector<double> probabilities;
@@ -148,6 +151,25 @@ template <typename T>
         return selected;
       }
 
+      individual<T> roulette_wheel_selection(){
+        double total_fitness = 0.0f;
+        for (const auto &indv: population){
+          total_fitness += indv.fitness;
+        }
+        if (total_fitness <= 0.0f){
+          std::uniform_int_distribution<size_t> dist(0, population_size-1);
+          return population[dist(rng)];
+        }
+        double r = uniform_dist(rng) * total_fitness;
+        double cumulative = 0.0f;
+        for (const auto& indv: population){
+          cumulative += indv.fitness;
+          if (cumulative >= r){
+            return indv;
+          }
+        }
+        return population.back();
+      }
       individual<T> select_parent(){
         switch(method){
           case selection_method::SUS:
@@ -155,6 +177,10 @@ template <typename T>
               auto selected = stochastic_universal_sampling();
               std::uniform_int_distribution<size_t> dist(0, selected.size() - 1);
               return selected[dist(rng)];
+            }
+          case selection_method::ROULETTE_WHEEL:
+            {
+              return roulette_wheel_selection();
             }
           case selection_method::TOURNAMENT:
           default:
@@ -343,7 +369,7 @@ int main(){
       [&knapsack]() {
         return knapsack.initialize_function();
       },
-      genetic_algorithm<knapsack_solution>::selection_method::SUS
+      genetic_algorithm<knapsack_solution>::selection_method::TOURNAMENT
       );
 
   auto best_solution = ga.run(true);
