@@ -37,7 +37,7 @@ template <typename T>
       double mutation_rate;
       size_t elitism_count;
       size_t max_generations;
-      selection_method selection__method;
+      selection_method method;
 
       // function pointers for problem-specific operations
       std::function<double(const T&)> fitness_function;
@@ -58,13 +58,13 @@ template <typename T>
           std::function<T(const T&, const T&)> cross_func,
           std::function<void(T&)> mut_func,
           std::function<T()> init_func,
-          selection_method method = selection_method::TOURNAMENT)
+          selection_method __method = selection_method::TOURNAMENT)
         :
           population_size(pop_size), crossover_rate(cross_rate),
           mutation_rate(mut_rate), elitism_count(elitism),
           max_generations(max_gen), fitness_function(fit_func),
           crossover_function(cross_func), mutation_function(mut_func),
-          initialization_function(init_func), uniform_dist(0.0, 1.0), selection__method(method)
+          initialization_function(init_func), uniform_dist(0.0, 1.0), method(__method)
     {
       std::random_device rd;
       rng.seed(rd());
@@ -149,7 +149,7 @@ template <typename T>
       }
 
       individual<T> select_parent(){
-        switch(selection__method){
+        switch(method){
           case selection_method::SUS:
             {
               auto selected = stochastic_universal_sampling();
@@ -173,13 +173,13 @@ template <typename T>
         // If using SUS, pre-select the entire mating pool
         //
         std::vector<individual<T>> mating_pool;
-        if (selection__method == selection_method::SUS){
+        if (method == selection_method::SUS){
           mating_pool = stochastic_universal_sampling();
         }
         // create rest of the pop
         while (new_population.size() < population_size){
           individual<T> parent1, parent2;
-          if (selection__method == selection_method::SUS){
+          if (method == selection_method::SUS){
             std::uniform_int_distribution<size_t> dist(0, mating_pool.size()-1);
             parent1 = mating_pool[dist(rng)];
             parent2 = mating_pool[dist(rng)];
@@ -236,17 +236,15 @@ template <typename T>
       individual<T> best_individual() const{
         return population[0];
       }
-      void set_selection_method(selection_method method){
-        selection__method = method;
+      void set_selection_method(selection_method __method){
+        method = __method;
       }
       selection_method get_selection_method() const{
-        return selection__method;
+        return method;
       }
   };
 } // namespace genetic_algorithm
-  //
-  //
-  //
+
  
 namespace example_problems{
   struct knapsack_item{
